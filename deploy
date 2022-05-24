@@ -1,0 +1,15 @@
+version=5
+
+container="capdev12/sea-battle:v"$version
+
+echo $container
+
+sbt assembly
+echo "Assembly success"
+
+#docker rmi $container
+docker build -t $container -f dockerfile .
+docker push $container
+#docker buildx build --platform linux/arm64 -t $container -f dockerFileArm64 . --push
+
+echo "Container success created $container"

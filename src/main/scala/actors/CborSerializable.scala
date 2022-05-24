@@ -1,0 +1,3 @@
+package actors
+
+trait CborSerializable

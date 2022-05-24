@@ -1,0 +1,5 @@
+FROM arm64v8/openjdk:11-jre-slim
+
+COPY target/scala-2.12/SiteParser-assembly-0.1.jar SiteParser-assembly-0.1.jar
+
+ENTRYPOINT ["java","-jar","SiteParser-assembly-0.1.jar"]

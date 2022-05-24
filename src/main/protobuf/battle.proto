@@ -1,0 +1,84 @@
+syntax = "proto3";
+package battle;
+
+service BattleService {
+    rpc start(Start) returns (StartResult);
+    rpc shot(Shot) returns (ShotResult);
+    rpc status(Status) returns (StatusResult);
+
+    rpc moves(Moves) returns (stream ShotResult);
+    rpc setup(Setup) returns (SetupResult);
+}
+
+message Player {
+    string id = 1;
+}
+
+message Start {
+    Player player1 = 1;
+    Player player2 = 2;
+}
+
+message StartResult {
+    bool success = 1;
+    string gameId = 2;
+}
+
+message Shot {
+    string gameId = 1;
+    string playerId = 2;
+    uint32 x = 3;
+    uint32 y = 4;
+}
+
+message ShotResult {
+    string playerId = 1;
+    uint32 x = 2;
+    uint32 y = 3;
+    string result = 4;
+}
+
+message Status {
+    string gameId = 1;
+    string playerId = 2;
+}
+
+message StatusResult {
+    string gameId = 1;
+    string playerId = 2;
+    string status = 3;
+}
+
+message Moves {
+    string gameId = 1;
+    string playerId = 2;
+}
+
+message Move {
+    uint32 x = 1;
+    uint32 y = 2;
+}
+
+enum Direction {
+    Horisontal = 0;
+    Vertical = 1;
+}
+
+message Ship {
+    uint32 x = 1;
+    uint32 y = 2;
+    Direction dir = 3;
+    uint32 decks = 4;
+}
+
+message Setup {
+    string gameId = 1;
+    string playerId = 2;
+    repeated Ship ships = 3;
+}
+
+message SetupResult {
+    string gameId = 1;
+    string playerId = 2;
+    bool success = 3;
+}
