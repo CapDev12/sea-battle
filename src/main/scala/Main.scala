@@ -12,7 +12,7 @@ import scala.concurrent.{Await, Future}
 
 object Main extends App {
 
- implicit val actorSystem: ActorSystem[Manager.ManagerEvent] = ActorSystem(Manager(), "ActorSystem")
+ implicit val actorSystem: ActorSystem[Manager.Message] = ActorSystem(Manager(), "ActorSystem")
 
   val config = ConfigFactory.load()
   actorSystem.log.info(s"akka.remote.artery.canonical.port: ${config.getString("akka.remote.artery.canonical.port")}")
@@ -24,7 +24,7 @@ object Main extends App {
   val result = Await.result(createIfNotExists, 1.minutes)
   actorSystem.log.info(s"Database initialized result: $result")
 
-  val managerActor: ActorRef[Manager.ManagerEvent] = actorSystem
+  val managerActor: ActorRef[Manager.Message] = actorSystem
 
 
 

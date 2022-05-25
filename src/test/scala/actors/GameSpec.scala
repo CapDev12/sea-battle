@@ -1,7 +1,7 @@
 package actors
 
 import actors.Game.ShotCmd
-import actors.Manager.{GameClose, ShotResultEvent}
+import actors.Manager.{GameResultMsg, ShotResultMsg}
 import akka.actor.testkit.typed.scaladsl.ActorTestKit
 import model.Players.{PlayerData, PlayerId}
 import model.Ships.{Horizontal, Ship, Vertical}
@@ -26,7 +26,7 @@ class GameSpec
   val playerId1 = uuid
   val playerId2 = uuid
 
-  val probe = testKit.createTestProbe[Manager.ManagerEvent]("manager")
+  val probe = testKit.createTestProbe[Manager.Message]("manager")
 
 //  val data = Map[PlayerId, PlayerData](
 //    (playerId1, PlayerData(Seq(Ship(1, 1, Horizontal, 2)), Set())),

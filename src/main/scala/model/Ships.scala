@@ -13,16 +13,16 @@ object Ships {
   def calcShipsDecks(ships: Seq[Ship]): Set[(Byte, Int)] =
     ships
       .groupBy(_.decks)
-      .map { case (decks, ships) => (decks, ships.size) }.toSet
+      .map { case (decks, ships) => (decks, ships.size) }
+      .toSet
 
   def checkShipsDecks(ships: Seq[Ship]): Boolean =
     Ships.calcShipsDecks(ships) == Rules.ships
 
   def checkShipBounds(ship: Ship): Boolean =
-    BattleMath.cells(ship).forall { case Shot(x, y) => x >= 1 && x <= Rules.width && y >= 1 && y <= Rules.height }
+    BattleMath.cells(ship).forall { case Shot(x, y) => x >= 1 && x <= Rules.fieldWidth && y >= 1 && y <= Rules.fieldHeight }
 
   def checkShipsBounds(ships: Seq[Ship]): Boolean =
     ships.forall(checkShipBounds)
-
 
 }

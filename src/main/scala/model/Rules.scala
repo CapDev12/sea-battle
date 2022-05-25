@@ -2,10 +2,10 @@ package model
 
 object Rules {
 
-  val width = 10
-  val height = 10
+  val fieldWidth = 10
+  val fieldHeight = 10
 
-  val ships = Set(
+  val ships: Set[(Int, Int)] = Set(
     (4, 1),
     (3, 2),
     (2, 3),

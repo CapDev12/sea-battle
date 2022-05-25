@@ -1,15 +1,19 @@
 package utils
 
-import model.Ships._
+import model.Ships.Ship
 import model.Shots._
 
 object BattleMath {
 
   def cells(ship: Ship): Set[Shot] = {
     if (ship.dir) {
-      (0 until ship.decks).map(deck => Shot(ship.x, ship.y + deck)).toSet
+      (0 until ship.decks)
+        .map(deck => Shot(ship.x, ship.y + deck))
+        .toSet
     } else {
-      (0 until ship.decks).map(deck => Shot(ship.x + deck, ship.y)).toSet
+      (0 until ship.decks)
+        .map(deck => Shot(ship.x + deck, ship.y))
+        .toSet
     }
   }
 
@@ -32,7 +36,9 @@ object BattleMath {
       Won
     else {
       val hitedShip = ships.find(ship => hitShip(ship, shots, shot) != Missed)
-      hitedShip.map(ship => hitShip(ship, shots, shot)).getOrElse(Missed)
+      hitedShip
+        .map(ship => hitShip(ship, shots, shot))
+        .getOrElse(Missed)
     }
   }
 

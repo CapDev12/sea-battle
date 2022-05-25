@@ -1,17 +1,16 @@
 package grpc
 
 import actors.Manager
-import actors.Manager.{CreateGame, GameClose, ManagerEvent, SetupGame, SetupGameResult, ShotCmd, ShotResultEvent, StatusEvent, StatusResultEvent, WatchShots}
+import actors.Manager._
 import akka.NotUsed
 import akka.actor.typed.scaladsl.AskPattern._
-import akka.actor.typed.{ActorRef, ActorSystem, Scheduler}
+import akka.actor.typed.{ActorRef, Scheduler}
+import akka.stream.scaladsl.Source
 import akka.stream.{CompletionStrategy, OverflowStrategy}
-import akka.stream.scaladsl.{Keep, Sink, Source}
 import akka.util.Timeout
 import battle._
-import model.GameStatus.gameStatusToStr
-import model.Players.{GameId, PlayerId}
-import model.Ships.{Horizontal, Vertical}
+import model.Games.GameId
+import model.Players.PlayerId
 import model.Shots.shotResultToStr
 
 import java.util.UUID
@@ -19,38 +18,37 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 
-class BattleServiceImpl(actor: ActorRef[Manager.ManagerEvent])(implicit val scheduler: Scheduler) extends BattleService {
+class BattleServiceImpl(actor: ActorRef[Manager.Message])(implicit val scheduler: Scheduler) extends BattleService {
 
   implicit val timeout: Timeout = 1.seconds
 
   def closePF(GameId: GameId): PartialFunction[Any, CompletionStrategy] = new PartialFunction[Any, CompletionStrategy] {
     def apply(x: Any): CompletionStrategy = CompletionStrategy.immediately
     def isDefinedAt(x: Any): Boolean = x match {
-      case GameClose(_, _) => true
+      case GameResultMsg(_, _) => true
       case _ => false
     }
   }
 
-  def movesActor(gameId: GameId, playerId: PlayerId): Source[ShotResult, NotUsed] = Source.actorRef[ManagerEvent](
+  def movesActor(gameId: GameId, playerId: PlayerId): Source[ShotResult, NotUsed] = Source.actorRef[Message](
     completionMatcher = closePF(gameId),
     failureMatcher = PartialFunction.empty,
     bufferSize = 100,
     overflowStrategy = OverflowStrategy.dropHead
   )
     .collect {
-      case ShotResultEvent(_, playerId, x, y, result) => ShotResult(playerId.toString, x, y, shotResultToStr(result))
+      case ShotResultMsg(_, playerId, x, y, result) => ShotResult(playerId.toString, x, y, shotResultToStr(result))
     }
     .mapMaterializedValue { act =>
-      actor ! WatchShots(gameId, playerId, act)
+      actor ! WatchMsg(gameId, playerId, act)
       NotUsed
     }
 
-
   override def start(in: Start): Future[StartResult] = {
     actor
-      .ask[ManagerEvent](act => CreateGame(UUID.fromString(in.getPlayer1.id), UUID.fromString(in.getPlayer2.id), act))
+      .ask[Result](act => CreateGameMsg(UUID.fromString(in.getPlayer1.id), UUID.fromString(in.getPlayer2.id), act))
       .collect {
-        case Manager.CreateGameResult(gameId, playerId1, playerId2, success, replyTo) =>
+        case Manager.CreateGameResultMsg(gameId, _, _, success, _) =>
           StartResult(success, gameId.toString)
       }
   }
@@ -60,22 +58,10 @@ class BattleServiceImpl(actor: ActorRef[Manager.ManagerEvent])(implicit val sche
     val playerId = UUID.fromString(in.playerId)
 
     actor
-      .ask[ManagerEvent](act => ShotCmd(gameId, playerId, in.x, in.y, act))
+      .ask[Result](act => ShotMsg(gameId, playerId, in.x, in.y, act))
       .collect {
-        case ShotResultEvent(gameId, playerId, x, y, result) =>
+        case ShotResultMsg(_, playerId, x, y, result) =>
           ShotResult(playerId.toString, x, y, shotResultToStr(result))
-      }
-  }
-
-  override def status(in: Status): Future[StatusResult] = {
-    val gameId = UUID.fromString(in.gameId)
-    val playerId = UUID.fromString(in.playerId)
-
-    actor
-      .ask[ManagerEvent](act => StatusEvent(gameId, playerId, act))
-      .collect {
-        case StatusResultEvent(gameId, playerId, status) =>
-          StatusResult(gameId.toString, playerId.toString, gameStatusToStr(status))
       }
   }
 
@@ -95,9 +81,9 @@ class BattleServiceImpl(actor: ActorRef[Manager.ManagerEvent])(implicit val sche
     }
 
     actor
-      .ask[ManagerEvent](act => SetupGame(gameId, playerId, ships, act))
+      .ask[Result](act => SetupGameMsg(gameId, playerId, ships, act))
       .collect {
-        case SetupGameResult(gameId, playerId, success) =>
+        case SetupGameResultMsg(gameId, playerId, success) =>
           SetupResult(gameId.toString, playerId.toString, success)
       }
   }

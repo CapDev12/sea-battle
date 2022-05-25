@@ -3,11 +3,9 @@ package battle;
 
 service BattleService {
     rpc start(Start) returns (StartResult);
-    rpc shot(Shot) returns (ShotResult);
-    rpc status(Status) returns (StatusResult);
-
-    rpc moves(Moves) returns (stream ShotResult);
     rpc setup(Setup) returns (SetupResult);
+    rpc shot(Shot) returns (ShotResult);
+    rpc moves(Moves) returns (stream ShotResult);
 }
 
 message Player {
@@ -36,17 +34,6 @@ message ShotResult {
     uint32 x = 2;
     uint32 y = 3;
     string result = 4;
-}
-
-message Status {
-    string gameId = 1;
-    string playerId = 2;
-}
-
-message StatusResult {
-    string gameId = 1;
-    string playerId = 2;
-    string status = 3;
 }
 
 message Moves {

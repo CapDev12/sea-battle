@@ -9,17 +9,17 @@ services:
 #      - /home/capdev/mysql/data:/var/lib/mysql
     image: mysql:latest
 
-  node1:
-    build: .
-    environment:
-      - ARTERY_HOST=node1
-      - ARTERY_PORT=2551
-      - SEED_HOST_1=node1
-      - SEED_HOST_2=node2
-      - DB_HOST=mysql
-    ports:
-      - "8080:8080"
-
+#  node1:
+#    build: .
+#    environment:
+#      - ARTERY_HOST=node1
+#      - ARTERY_PORT=2551
+#      - SEED_HOST_1=node1
+#      - SEED_HOST_2=node2
+#      - DB_HOST=mysql
+#    ports:
+#      - "8080:8080"
+#
 #  node2:
 #    build: .
 #    environment:
