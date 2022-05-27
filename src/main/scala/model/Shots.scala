@@ -13,17 +13,6 @@ object Shots {
   case object NotYourTurn extends ShotResult
   case object Timeout extends ShotResult
 
-  def shotResultToStr(shotResult: ShotResult): String = shotResult match {
-    case GameNotFound => "GameNotFound"
-    case Missed => "Missed"
-    case Injured => "Injured"
-    case Destroyed => "Destroyed"
-    case Won => "Won"
-    case Lose => "Lose"
-    case NotYourTurn => "NotYourTurn"
-    case Timeout => "Timeout"
-  }
-
   case class Shot(x: Int, y: Int)
 
   def checkShotBounds(x: Int, y: Int): Boolean =

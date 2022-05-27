@@ -6,8 +6,7 @@ import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity, EntityType
 import model.Games.GameId
 import model.Players.PlayerId
 import model.Ships.Ship
-import model.Shots.ShotResult
-import model.{Games, Shots}
+import model.Shots
 import org.slf4j.Logger
 import utils.Utils
 
@@ -25,7 +24,7 @@ object Manager {
   case class GameResultMsg(gameId: GameId, winnerId: Option[PlayerId]) extends Message with Result
 
   case class ShotMsg(gameId: GameId, playerId: PlayerId, x: Int, y: Int, replyTo: ActorRef[Manager.Result]) extends Message
-  case class ShotResultMsg(gameId: GameId, playerId: PlayerId, x: Int, y: Int, result: ShotResult) extends Message with Result
+  case class ShotResultMsg(gameId: GameId, playerId: PlayerId, x: Int, y: Int, result: String) extends Message with Result
 
   case class WatchMsg(gameId: GameId, playerId: PlayerId, actor: akka.actor.ActorRef) extends Message
 
@@ -86,7 +85,7 @@ object Manager {
         game ! Game.ShotCmd(playerId, x, y, replyTo, managerRef)
       } else {
         log.info(s"Shot gameId: $gameId not found")
-        replyTo ! ShotResultMsg(gameId, playerId, x, y, Shots.GameNotFound)
+        replyTo ! ShotResultMsg(gameId, playerId, x, y, Shots.GameNotFound.toString)
       }
 
       Behaviors.same

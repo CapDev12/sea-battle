@@ -11,7 +11,6 @@ import akka.util.Timeout
 import battle._
 import model.Games.GameId
 import model.Players.PlayerId
-import model.Shots.shotResultToStr
 
 import java.util.UUID
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -37,7 +36,8 @@ class BattleServiceImpl(actor: ActorRef[Manager.Message])(implicit val scheduler
     overflowStrategy = OverflowStrategy.dropHead
   )
     .collect {
-      case ShotResultMsg(_, playerId, x, y, result) => ShotResult(playerId.toString, x, y, shotResultToStr(result))
+      case ShotResultMsg(_, playerId, x, y, result) =>
+        ShotResult(playerId.toString, x, y, result)
     }
     .mapMaterializedValue { act =>
       actor ! WatchMsg(gameId, playerId, act)
@@ -61,7 +61,7 @@ class BattleServiceImpl(actor: ActorRef[Manager.Message])(implicit val scheduler
       .ask[Result](act => ShotMsg(gameId, playerId, in.x, in.y, act))
       .collect {
         case ShotResultMsg(_, playerId, x, y, result) =>
-          ShotResult(playerId.toString, x, y, shotResultToStr(result))
+          ShotResult(playerId.toString, x, y, result)
       }
   }
 

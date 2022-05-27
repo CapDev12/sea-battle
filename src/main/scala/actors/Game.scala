@@ -10,7 +10,7 @@ import model.Games.GameId
 import model.Players.{PlayerId, PlayersData, initData}
 import model.Ships._
 import model.Shots
-import model.Shots._
+import model.Shots.Shot
 import org.slf4j.Logger
 import utils.BattleMath.hit
 
@@ -190,8 +190,8 @@ object Game {
           val moverShots = data(cmd.playerId).shots
           val shotResultEvent = hit(targetShips, moverShots.toSet, Shot(cmd.x, cmd.y))
 
-          cmd.replyTo ! ShotResultMsg(gameId, cmd.playerId, cmd.x, cmd.y, shotResultEvent)
-          movesAct.foreach(_ ! ShotResultMsg(gameId, cmd.playerId, cmd.x, cmd.y, shotResultEvent))
+          cmd.replyTo ! ShotResultMsg(gameId, cmd.playerId, cmd.x, cmd.y, shotResultEvent.toString)
+          movesAct.foreach(_ ! ShotResultMsg(gameId, cmd.playerId, cmd.x, cmd.y, shotResultEvent.toString))
           log.info(s"Shot gameId: $gameId playerId: ${cmd.playerId} x: ${cmd.x} y: ${cmd.y} result: $shotResultEvent")
 
           if (shotResultEvent == Shots.Won) {
@@ -205,8 +205,8 @@ object Game {
       Effect
         .none
         .thenRun { state =>
-          cmd.replyTo ! ShotResultMsg(gameId, cmd.playerId, cmd.x, cmd.y, Shots.NotYourTurn)
-          movesAct.foreach(_ ! ShotResultMsg(gameId, cmd.playerId, cmd.x, cmd.y, Shots.NotYourTurn))
+          cmd.replyTo ! ShotResultMsg(gameId, cmd.playerId, cmd.x, cmd.y, Shots.NotYourTurn.toString)
+          movesAct.foreach(_ ! ShotResultMsg(gameId, cmd.playerId, cmd.x, cmd.y, Shots.NotYourTurn.toString))
           log.info(s"Shot gameId: $gameId playerId: ${cmd.playerId} x: ${cmd.x} y: ${cmd.y} result: NotYourTurn")
         }
     }
@@ -216,7 +216,7 @@ object Game {
     Effect
       .persist(MoveTimeoutEvent)
       .thenRun { state =>
-        movesAct.foreach(_ ! ShotResultMsg(gameId, moverId, 0, 0, Shots.Timeout))
+        movesAct.foreach(_ ! ShotResultMsg(gameId, moverId, 0, 0, Shots.Timeout.toString))
         val nextMoverId = nextPlayerId(moverId, data.keys.toSeq)
         timers.startSingleTimer(MoveTimeoutCmd(nextMoverId), MoveTimeoutCmd(nextMoverId), moveTimeout)
       }
