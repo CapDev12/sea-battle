@@ -17,9 +17,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 
-class BattleServiceImpl(actor: ActorRef[Manager.Message])(implicit val scheduler: Scheduler) extends BattleService {
-
-  implicit val timeout: Timeout = 1.seconds
+class BattleServiceImpl(actor: ActorRef[Manager.Message], implicit val timeout: Timeout)(implicit val scheduler: Scheduler) extends BattleService {
 
   def closePF(GameId: GameId): PartialFunction[Any, CompletionStrategy] = new PartialFunction[Any, CompletionStrategy] {
     def apply(x: Any): CompletionStrategy = CompletionStrategy.immediately

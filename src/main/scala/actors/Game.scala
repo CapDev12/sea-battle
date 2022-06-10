@@ -71,7 +71,6 @@ object Game {
     )
 
   private def commandHandler(timers: TimerScheduler[Command], log: Logger): (State, Command) => Effect[Event, State] = { (state, command) =>
-    //log.info(s"state: $state cmd: $command")
     state match {
       case Init() =>
         command match {

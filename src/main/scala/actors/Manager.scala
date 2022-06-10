@@ -1,7 +1,7 @@
 package actors
 
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.{ActorRef, Behavior}
+import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity, EntityTypeKey}
 import model.Games.GameId
 import model.Players.PlayerId
@@ -28,18 +28,9 @@ object Manager {
 
   case class WatchMsg(gameId: GameId, playerId: PlayerId, actor: akka.actor.ActorRef) extends Message
 
-  val TypeKey: EntityTypeKey[Game.Command] = EntityTypeKey[Game.Command]("Game")
+  def apply(sharding: GameSharding): Behavior[Message] = gameBehavior(0L, Set())(sharding)
 
-  def apply(): Behavior[Message] = Behaviors.setup { context =>
-    implicit val sharding: ClusterSharding = ClusterSharding(context.system)
-
-    sharding.init(Entity(TypeKey)(createBehavior = entityContext => Game(entityContext.entityId)))
-    context.spawn(ClusterListener(), "ClusterListener")
-
-    gameBehavior(0L, Set())
-  }
-
-  private def gameBehavior(gameCount: Long, games: Set[GameId])(implicit sharding: ClusterSharding): Behavior[Message] =
+  private def gameBehavior(gameCount: Long, games: Set[GameId])(implicit sharding: GameSharding): Behavior[Message] =
     Behaviors.setup { context =>
       Behaviors.receiveMessagePartial(
         gamePF(context.log, gameCount, games, context.self.unsafeUpcast) orElse
@@ -48,10 +39,10 @@ object Manager {
       )
     }
 
-  private def gamePF(log: Logger, gameCount: Long, games: Set[GameId], managerRef: ActorRef[Result])(implicit sharding: ClusterSharding): PartialFunction[Message, Behavior[Message]] = {
+  private def gamePF(log: Logger, gameCount: Long, games: Set[GameId], managerRef: ActorRef[Result])(implicit sharding: GameSharding): PartialFunction[Message, Behavior[Message]] = {
     case CreateGameMsg(playerId1, playerId2, replyTo) =>
       val gameId = Utils.uuid
-      val game = sharding.entityRefFor(TypeKey, gameId.toString)
+      val game = sharding.entityRefFor(gameId.toString)
 
       game ! Game.CreateGameCmd(gameId, playerId1, playerId2, replyTo, managerRef)
 
@@ -65,7 +56,7 @@ object Manager {
     case SetupGameMsg(gameId, playerId, ships, replyTo) =>
       if(games.contains(gameId)) {
         log.info(s"Setup gameId: $gameId playerId: $playerId ships: $ships")
-        val game = sharding.entityRefFor(TypeKey, gameId.toString)
+        val game = sharding.entityRefFor(gameId.toString)
         game ! Game.SetupGameCmd(playerId, ships, replyTo)
       } else {
         log.info(s"Setup gameId: $gameId not found")
@@ -78,10 +69,10 @@ object Manager {
       gameBehavior(gameCount, games - gameId)
   }
 
-  private def shotPF(log: Logger, games: Set[GameId], managerRef: ActorRef[Result])(implicit sharding: ClusterSharding): PartialFunction[Message, Behavior[Message]] = {
+  private def shotPF(log: Logger, games: Set[GameId], managerRef: ActorRef[Result])(implicit sharding: GameSharding): PartialFunction[Message, Behavior[Message]] = {
     case ShotMsg(gameId, playerId, x, y, replyTo) =>
       if(games.contains(gameId)) {
-        val game = sharding.entityRefFor(TypeKey, gameId.toString)
+        val game = sharding.entityRefFor(gameId.toString)
         game ! Game.ShotCmd(playerId, x, y, replyTo, managerRef)
       } else {
         log.info(s"Shot gameId: $gameId not found")
@@ -91,9 +82,9 @@ object Manager {
       Behaviors.same
   }
 
-  private def watchingPF(implicit sharding: ClusterSharding): PartialFunction[Message, Behavior[Message]] = {
+  private def watchingPF(implicit sharding: GameSharding): PartialFunction[Message, Behavior[Message]] = {
     case WatchMsg(gameId, _, actor) =>
-      val game = sharding.entityRefFor(TypeKey, gameId.toString)
+      val game = sharding.entityRefFor(gameId.toString)
       game ! Game.WatchCmd(actor)
       Behaviors.same
   }
