@@ -18,9 +18,6 @@ import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 object Game {
 
-  val setupTimeout: FiniteDuration = 10.seconds
-  val moveTimeout: FiniteDuration = 5.seconds
-
   sealed trait State extends CborSerializable
   case class Init() extends State
   case class Setup(gameId: GameId, playerId1: PlayerId, playerId2: PlayerId, data: PlayersData, managerRef: ActorRef[Result], movesAct: Seq[akka.actor.ActorRef]) extends State
@@ -44,13 +41,13 @@ object Game {
   case object MoveTimeoutEvent extends Event
   case class WatchEvent(actor: akka.actor.ActorRef) extends Event
 
-  def apply(entityId: String): Behavior[Command] =
+  def apply(entityId: String, setupTimeout: FiniteDuration, moveTimeout: FiniteDuration): Behavior[Command] =
     Behaviors.setup(context =>
       Behaviors.withTimers(timers =>
         EventSourcedBehavior[Command, Event, State](
           persistenceId = PersistenceId("Game", entityId),
           emptyState = Init(),
-          commandHandler = commandHandler(timers, context.log),
+          commandHandler = commandHandler(timers, setupTimeout, moveTimeout, context.log),
           eventHandler = eventHandler(context.log)
         )
           .receiveSignal { case (state, RecoveryCompleted) =>
@@ -70,12 +67,13 @@ object Game {
       )
     )
 
-  private def commandHandler(timers: TimerScheduler[Command], log: Logger): (State, Command) => Effect[Event, State] = { (state, command) =>
+  private def commandHandler(timers: TimerScheduler[Command], setupTimeout: FiniteDuration, moveTimeout: FiniteDuration,
+                             log: Logger): (State, Command) => Effect[Event, State] = { (state, command) =>
     state match {
       case Init() =>
         command match {
          case CreateGameCmd(gameId, playerId1, playerId2, replyTo: ActorRef[Manager.Result], managerRef: ActorRef[Result]) =>
-           createCmd(gameId, playerId1, playerId2, replyTo, managerRef, timers, log)
+           createCmd(gameId, playerId1, playerId2, replyTo, managerRef, timers, setupTimeout, log)
 
          case _ =>
            Effect.none
@@ -84,7 +82,7 @@ object Game {
       case Setup(gameId, _, _, data, managerRef, movesAct) =>
         command match {
           case SetupGameCmd(playerId, ships, replyTo) =>
-            setupCmd(gameId, data, playerId, ships, replyTo, timers, log)
+            setupCmd(gameId, data, playerId, ships, replyTo, timers, moveTimeout, log)
 
           case SetupTimeoutCmd =>
             setupTimeoutCmd(gameId, managerRef, movesAct)
@@ -99,10 +97,10 @@ object Game {
       case Battle(gameId, moverId, data, movesAct) =>
         command match {
           case cmd: ShotCmd =>
-            shotCmd(cmd, data, gameId, moverId, timers, movesAct, log)
+            shotCmd(cmd, data, gameId, moverId, timers, moveTimeout, movesAct, log)
 
           case MoveTimeoutCmd(_) =>
-            moveTimeoutCmd(gameId, moverId, data, timers, movesAct, log)
+            moveTimeoutCmd(gameId, moverId, data, timers, moveTimeout, movesAct)
 
           case WatchCmd(actor) =>
             watchCmd(actor)
@@ -117,7 +115,9 @@ object Game {
     }
   }
 
-  private def createCmd(gameId: GameId, playerId1: PlayerId, playerId2: PlayerId, replyTo: ActorRef[Manager.Result], managerRef: ActorRef[Result], timers: TimerScheduler[Command], log: Logger): Effect[Event, State] = {
+  private def createCmd(gameId: GameId, playerId1: PlayerId, playerId2: PlayerId, replyTo: ActorRef[Manager.Result],
+                        managerRef: ActorRef[Result], timers: TimerScheduler[Command], setupTimeout: FiniteDuration,
+                        log: Logger): Effect[Event, State] = {
     if(playerId1 != playerId2)
       Effect
         .persist(CreateGameEvent(gameId, playerId1, playerId2, managerRef))
@@ -132,7 +132,8 @@ object Game {
     }
   }
 
-  private def setupCmd(gameId: GameId, data: PlayersData, playerId: PlayerId, ships: Seq[Ship], replyTo: ActorRef[Manager.Result], timers: TimerScheduler[Command], log: Logger): Effect[Event, State] = {
+  private def setupCmd(gameId: GameId, data: PlayersData, playerId: PlayerId, ships: Seq[Ship], replyTo: ActorRef[Manager.Result],
+                       timers: TimerScheduler[Command], moveTimeout: FiniteDuration, log: Logger): Effect[Event, State] = {
     if (!data.contains(playerId)) {
       log.info(s"Trying to setup ships for a non-existent player. gameId: $gameId, playerId: $playerId")
       Effect
@@ -164,7 +165,8 @@ object Game {
     }
   }
 
-  private def setupTimeoutCmd(gameId: GameId, managerRef: ActorRef[Manager.Result], movesAct: Seq[akka.actor.ActorRef]): Effect[Event, State] = {
+  private def setupTimeoutCmd(gameId: GameId, managerRef: ActorRef[Manager.Result], movesAct: Seq[akka.actor.ActorRef])
+  : Effect[Event, State] = {
     Effect
       .persist(SetupTimeoutEvent)
       .thenRun { _ =>
@@ -174,7 +176,8 @@ object Game {
       }
   }
 
-  private def shotCmd(cmd: ShotCmd, data: PlayersData, gameId: GameId, moverId: PlayerId, timers: TimerScheduler[Command], movesAct: Seq[akka.actor.ActorRef], log: Logger): Effect[Event, State] = {
+  private def shotCmd(cmd: ShotCmd, data: PlayersData, gameId: GameId, moverId: PlayerId, timers: TimerScheduler[Command],
+                      moveTimeout: FiniteDuration, movesAct: Seq[akka.actor.ActorRef], log: Logger): Effect[Event, State] = {
     if (cmd.playerId == moverId) {
       timers.cancel(MoveTimeoutCmd(moverId))
 
@@ -211,7 +214,8 @@ object Game {
     }
   }
 
-  private def moveTimeoutCmd(gameId: GameId, moverId: PlayerId, data: PlayersData, timers: TimerScheduler[Command], movesAct: Seq[akka.actor.ActorRef], log: Logger): Effect[Event, State] = {
+  private def moveTimeoutCmd(gameId: GameId, moverId: PlayerId, data: PlayersData, timers: TimerScheduler[Command],
+                             moveTimeout: FiniteDuration, movesAct: Seq[akka.actor.ActorRef]): Effect[Event, State] = {
     Effect
       .persist(MoveTimeoutEvent)
       .thenRun { state =>

@@ -11,14 +11,16 @@ object Main extends App {
 
   val config = ConfigFactory.load()
 
-  import utils.Utils.durationToTimeout
+  import utils.Utils.{durationToTimeout, durationToFiniteDuration}
   implicit val system: ActorSystem[NotUsed] = ActorSystem(
     Guardian(
       apiEnabled = config.getBoolean("api.enabled"),
       useClustrListener = true,
       interface = config.getString("grpc.interface"),
       port = config.getInt("grpc.port"),
-      timeout = config.getDuration("grpc.timeout"),
+      askTimeout = config.getDuration("game.ask-timeout"),
+      setupTimeout = config.getDuration("game.setup-timeout"),
+      moveTimeout = config.getDuration("game.move-timeout")
     ), "ActorSystem")
 
   SchemaUtils

@@ -4,7 +4,7 @@ import akka.util.Timeout
 
 import java.util.UUID
 import java.time.Duration
-import scala.concurrent.duration.MILLISECONDS
+import scala.concurrent.duration.{FiniteDuration, MILLISECONDS}
 
 object Utils {
 
@@ -12,5 +12,8 @@ object Utils {
 
   implicit def durationToTimeout(duration: Duration): Timeout =
     Timeout(duration.toMillis, MILLISECONDS)
+
+  implicit def durationToFiniteDuration(duration: Duration): FiniteDuration =
+    FiniteDuration(duration.toMillis, MILLISECONDS)
 
 }

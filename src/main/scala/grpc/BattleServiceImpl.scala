@@ -1,7 +1,5 @@
 package grpc
 
-import actors.Manager
-import actors.Manager._
 import akka.NotUsed
 import akka.actor.typed.scaladsl.AskPattern._
 import akka.actor.typed.{ActorRef, Scheduler}
@@ -11,18 +9,19 @@ import akka.util.Timeout
 import battle._
 import model.Games.GameId
 import model.Players.PlayerId
+import actors.Manager._
 
 import java.util.UUID
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.concurrent.duration.DurationInt
 
-class BattleServiceImpl(actor: ActorRef[Manager.Message], implicit val timeout: Timeout)(implicit val scheduler: Scheduler) extends BattleService {
+class BattleServiceImpl(actor: ActorRef[Message], implicit val timeout: Timeout)(implicit val scheduler: Scheduler) extends BattleService {
 
   def closePF(GameId: GameId): PartialFunction[Any, CompletionStrategy] = new PartialFunction[Any, CompletionStrategy] {
     def apply(x: Any): CompletionStrategy = CompletionStrategy.immediately
+
     def isDefinedAt(x: Any): Boolean = x match {
-      case GameResultMsg(_, _) => true
+      case GameResultMsg(GameId, _) => true
       case _ => false
     }
   }
@@ -46,7 +45,7 @@ class BattleServiceImpl(actor: ActorRef[Manager.Message], implicit val timeout: 
     actor
       .ask[Result](act => CreateGameMsg(UUID.fromString(in.getPlayer1.id), UUID.fromString(in.getPlayer2.id), act))
       .collect {
-        case Manager.CreateGameResultMsg(gameId, _, _, success, _) =>
+        case CreateGameResultMsg(gameId, _, _, success, _) =>
           StartResult(success, gameId.toString)
       }
   }

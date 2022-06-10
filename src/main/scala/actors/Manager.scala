@@ -18,12 +18,12 @@ object Manager {
   case class CreateGameMsg(playerId1: PlayerId, playerId2: PlayerId, replyTo: ActorRef[Result]) extends Message
   case class CreateGameResultMsg(gameId: GameId, playerId1: PlayerId, playerId2: PlayerId, success: Boolean, replyTo: ActorRef[Result]) extends Message with Result
 
-  case class SetupGameMsg(gameId: GameId, playerId: PlayerId, ships: Seq[Ship], replyTo: ActorRef[Manager.Result]) extends Message
+  case class SetupGameMsg(gameId: GameId, playerId: PlayerId, ships: Seq[Ship], replyTo: ActorRef[Result]) extends Message
   case class SetupGameResultMsg(gameId: GameId, playerId: PlayerId, success: Boolean) extends Message with Result
 
   case class GameResultMsg(gameId: GameId, winnerId: Option[PlayerId]) extends Message with Result
 
-  case class ShotMsg(gameId: GameId, playerId: PlayerId, x: Int, y: Int, replyTo: ActorRef[Manager.Result]) extends Message
+  case class ShotMsg(gameId: GameId, playerId: PlayerId, x: Int, y: Int, replyTo: ActorRef[Result]) extends Message
   case class ShotResultMsg(gameId: GameId, playerId: PlayerId, x: Int, y: Int, result: String) extends Message with Result
 
   case class WatchMsg(gameId: GameId, playerId: PlayerId, actor: akka.actor.ActorRef) extends Message
