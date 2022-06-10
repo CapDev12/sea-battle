@@ -14,7 +14,7 @@ object Main extends App {
   import utils.Utils.durationToTimeout
   implicit val system: ActorSystem[NotUsed] = ActorSystem(
     Guardian(
-      useManager = config.getBoolean("api.enabled"),
+      apiEnabled = config.getBoolean("api.enabled"),
       useClustrListener = true,
       interface = config.getString("grpc.interface"),
       port = config.getInt("grpc.port"),

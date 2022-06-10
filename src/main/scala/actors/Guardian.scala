@@ -9,7 +9,7 @@ import grpc.GrpcServer
 
 object Guardian {
 
-  def apply(useManager: Boolean, useClustrListener: Boolean, interface: String, port: Int, timeout: Timeout): Behavior[NotUsed] =
+  def apply(apiEnabled: Boolean, useClustrListener: Boolean, interface: String, port: Int, timeout: Timeout): Behavior[NotUsed] =
     Behaviors.setup { context =>
       if (useClustrListener)
         context.spawn(ClusterListener(), "ClusterListener")
@@ -17,7 +17,7 @@ object Guardian {
       val gameSharding = GameSharding(ClusterSharding(context.system))
       gameSharding.initSharding()
 
-      if (useManager) {
+      if (apiEnabled) {
         val managerActor = context.spawn(Manager(gameSharding), "Manager")
         GrpcServer(interface, port, timeout, managerActor)(context.system)
       }
