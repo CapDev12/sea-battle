@@ -40,7 +40,7 @@ assembly / assemblyJarName := "sea-battle.jar"
 
 assembly / mainClass := Some("Main")
 
-assemblyMergeStrategy in assembly := {
+assembly / assemblyMergeStrategy := {
   case "reference.conf" => MergeStrategy.concat
   case PathList("META-INF", xs @ _*) => MergeStrategy.discard
   case x => MergeStrategy.first
