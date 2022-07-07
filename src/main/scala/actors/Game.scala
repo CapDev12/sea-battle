@@ -9,12 +9,12 @@ import akka.persistence.typed.{PersistenceId, RecoveryCompleted}
 import model.Games.GameId
 import model.Players.{PlayerId, PlayersData, initData}
 import model.Ships._
-import model.Shots
 import model.Shots.Shot
+import model.{Rules, Shots}
 import org.slf4j.Logger
-import utils.BattleMath.hit
+import utils.BattleMath._
 
-import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.concurrent.duration.FiniteDuration
 
 object Game {
 
@@ -304,7 +304,7 @@ object Game {
     playersIds.find(_ != playerId).get
 
   private def checkShips(ships: Seq[Ship]): Boolean =
-    checkShipsDecks(ships) && checkShipsBounds(ships)
+    checkShipsDecks(Rules.ships, ships) && checkShipsBoundsAndBorders(Rules.fieldWidth, Rules.fieldHeight, ships)
 
   private def completeShipSetup(data: PlayersData): Boolean =
     data.count(_._2.setupShips) == 2
