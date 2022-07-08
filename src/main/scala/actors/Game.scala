@@ -134,13 +134,16 @@ object Game {
 
   private def setupCmd(gameId: GameId, data: PlayersData, playerId: PlayerId, ships: Seq[Ship], replyTo: ActorRef[Manager.Result],
                        timers: TimerScheduler[Command], moveTimeout: FiniteDuration, log: Logger): Effect[Event, State] = {
+
+    lazy val checkShipsMsg = checkShips(Rules.fieldWidth, Rules.fieldHeight, Rules.ships, ships)
+
     if (!data.contains(playerId)) {
       log.info(s"Trying to setup ships for a non-existent player. gameId: $gameId, playerId: $playerId")
       Effect
         .none
         .thenRun(_ => replyTo ! SetupGameResultMsg(gameId, playerId, success = false))
-    } else if (!checkShips(ships)) {
-      log.info(s"Trying to setup non-valid ships. gameId: $gameId, playerId: $playerId")
+    } else if (checkShipsMsg.nonEmpty) {
+      log.info(s"Setup non-valid ships. gameId: $gameId, playerId: $playerId\n${checkShipsMsg.get}")
       Effect
         .none
         .thenRun(_ => replyTo ! SetupGameResultMsg(gameId, playerId, success = false))
@@ -302,9 +305,6 @@ object Game {
 
   private def nextPlayerId(playerId: PlayerId, playersIds: Seq[PlayerId]): PlayerId =
     playersIds.find(_ != playerId).get
-
-  private def checkShips(ships: Seq[Ship]): Boolean =
-    checkShipsDecks(Rules.ships, ships) && checkShipsBoundsAndBorders(Rules.fieldWidth, Rules.fieldHeight, ships)
 
   private def completeShipSetup(data: PlayersData): Boolean =
     data.count(_._2.setupShips) == 2

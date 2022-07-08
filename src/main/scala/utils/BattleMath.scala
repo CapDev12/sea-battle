@@ -60,17 +60,46 @@ object BattleMath {
     }
   }
 
-  private def calculateShipsDecks(ships: Seq[Ship]): Set[(Byte, Int)] =
+  private def calculateShipsDecks(ships: Seq[Ship]): Map[Byte, Int] =
     ships
       .groupBy(_.decks)
       .map { case (decks, ships) => (decks, ships.size) }
-      .toSet
 
-  def checkShipsDecks(rulesShips: Set[(Byte, Int)], ships: Seq[Ship]): Boolean =
-    calculateShipsDecks(ships) == rulesShips
+  def checkShipsDecks(rulesShips: Set[(Byte, Int)], ships: Seq[Ship]): Option[String] = {
+    val shipDecksCount = calculateShipsDecks(ships)
 
-  private def checkShipBound(fieldWidth: Int, fieldHeight: Int, ship: Ship): Boolean =
+    val items = rulesShips
+      .flatMap { case (decks, ruleShipCount) =>
+        val count = shipDecksCount.getOrElse(decks, 0)
+        if (count < ruleShipCount)
+          Some(s"Missing ${ruleShipCount - count} $decks-deck ships")
+        else if (count > ruleShipCount)
+          Some(s"Extra ${count - ruleShipCount} $decks-deck ships")
+        else
+          None
+      }
+
+    val extra = shipDecksCount
+      .filter { case (decks, _) => !rulesShips.toMap.keySet.contains(decks) }
+      .flatMap { case (decks, count) => Some(s"Extra $count $decks-deck ships") }
+
+    if ((items ++ extra).nonEmpty) Some((items ++ extra).mkString(". ")) else None
+  }
+
+  private def checkShipBounds(fieldWidth: Int, fieldHeight: Int, ship: Ship): Boolean =
     BattleMath.cells(ship).forall { case Shot(x, y) => x >= 1 && x <= fieldWidth && y >= 1 && y <= fieldHeight }
+
+  def checkShipsBounds(fieldWidth: Int, fieldHeight: Int, ships: Seq[Ship]): Option[String] = {
+    val msg = ships.flatMap( ship =>
+      if (checkShipBounds(fieldWidth, fieldHeight, ship))
+        None
+      else
+        Some(s"$ship out of field bounds")
+    )
+    .mkString(". ")
+
+    if(msg.isEmpty) None else Some(msg)
+  }
 
   private def findIntersectShipsBorders(fieldWidth: Int, fieldHeight: Int, ships: Seq[Ship]): Set[(Ship, Ship)] = {
     def isIntersect(fieldWidth: Int, fieldHeight: Int, ship1: Ship, ship2: Ship): Boolean =
@@ -85,11 +114,26 @@ object BattleMath {
       .toSet
   }
 
-  def checkShipsBoundsAndBorders(fieldWidth: Int, fieldHeight: Int, ships: Seq[Ship]): Boolean = {
+  def checkShipsIntersect(fieldWidth: Int, fieldHeight: Int, ships: Seq[Ship]): Option[String] = {
     val intersectShipsBorders = findIntersectShipsBorders(fieldWidth, fieldHeight, ships)
-    if(intersectShipsBorders.nonEmpty) println(s"diff: $intersectShipsBorders")
 
-    ships.forall(checkShipBound(fieldWidth, fieldHeight, _)) && intersectShipsBorders.isEmpty
+    if(intersectShipsBorders.nonEmpty)
+      Some(
+        intersectShipsBorders
+        .map { case (ship1, ship2) => s"$ship1 intersect with $ship2"}
+        .mkString(". ")
+      )
+    else
+      None
+  }
+
+  def checkShips(fieldWidth: Int, fieldHeight: Int, rulesShips: Set[(Byte, Int)], ships: Seq[Ship]): Option[String] = {
+    val errors = Seq(
+      checkShipsDecks(rulesShips, ships),
+      checkShipsBounds(fieldWidth, fieldHeight, ships),
+      checkShipsIntersect(fieldWidth, fieldHeight, ships)
+    ).flatten
+    if (errors.nonEmpty) Some(errors.mkString) else None
   }
 
   lazy val random = new Random()
@@ -108,7 +152,7 @@ object BattleMath {
         val decks = head
         val ship = Ship(x, y, dir, decks)
 
-        if(checkShipBound(fieldWidth, fieldHeight, ship) && !isShipIntersect(ships, ship))
+        if(checkShipBounds(fieldWidth, fieldHeight, ship) && !isShipIntersect(ships, ship))
           place(fieldWidth, fieldHeight, tail, ships :+ ship, rndInt)
         else
           place(fieldWidth, fieldHeight, placeShips, ships, rndInt)
