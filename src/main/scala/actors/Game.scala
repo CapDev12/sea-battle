@@ -8,9 +8,10 @@ import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior}
 import akka.persistence.typed.{PersistenceId, RecoveryCompleted}
 import model.Games.GameId
 import model.Players.{PlayerId, PlayersData, initData}
+import model.Rules.ShipRules
 import model.Ships._
 import model.Shots.Shot
-import model.{Rules, Shots}
+import model.Shots
 import org.slf4j.Logger
 import utils.BattleMath._
 
@@ -41,13 +42,14 @@ object Game {
   case object MoveTimeoutEvent extends Event
   case class WatchEvent(actor: akka.actor.ActorRef) extends Event
 
-  def apply(entityId: String, setupTimeout: FiniteDuration, moveTimeout: FiniteDuration): Behavior[Command] =
+  def apply(entityId: String, setupTimeout: FiniteDuration, moveTimeout: FiniteDuration, fieldWidth: Int,
+            fieldHeight: Int, shipRules: ShipRules): Behavior[Command] =
     Behaviors.setup(context =>
       Behaviors.withTimers(timers =>
         EventSourcedBehavior[Command, Event, State](
           persistenceId = PersistenceId("Game", entityId),
           emptyState = Init(),
-          commandHandler = commandHandler(timers, setupTimeout, moveTimeout, context.log),
+          commandHandler = commandHandler(timers, setupTimeout, moveTimeout, fieldWidth, fieldHeight, shipRules, context.log),
           eventHandler = eventHandler(context.log)
         )
           .receiveSignal { case (state, RecoveryCompleted) =>
@@ -68,7 +70,8 @@ object Game {
     )
 
   private def commandHandler(timers: TimerScheduler[Command], setupTimeout: FiniteDuration, moveTimeout: FiniteDuration,
-                             log: Logger): (State, Command) => Effect[Event, State] = { (state, command) =>
+                             fieldWidth: Int, fieldHeight: Int, shipRules: ShipRules, log: Logger):
+  (State, Command) => Effect[Event, State] = { (state, command) =>
     state match {
       case Init() =>
         command match {
@@ -82,7 +85,7 @@ object Game {
       case Setup(gameId, _, _, data, managerRef, movesAct) =>
         command match {
           case SetupGameCmd(playerId, ships, replyTo) =>
-            setupCmd(gameId, data, playerId, ships, replyTo, timers, moveTimeout, log)
+            setupCmd(gameId, data, playerId, ships, replyTo, timers, moveTimeout, fieldWidth, fieldHeight, shipRules, log)
 
           case SetupTimeoutCmd =>
             setupTimeoutCmd(gameId, managerRef, movesAct)
@@ -132,10 +135,11 @@ object Game {
     }
   }
 
-  private def setupCmd(gameId: GameId, data: PlayersData, playerId: PlayerId, ships: Seq[Ship], replyTo: ActorRef[Manager.Result],
-                       timers: TimerScheduler[Command], moveTimeout: FiniteDuration, log: Logger): Effect[Event, State] = {
+  private def setupCmd(gameId: GameId, data: PlayersData, playerId: PlayerId, ships: Seq[Ship],
+                       replyTo: ActorRef[Manager.Result], timers: TimerScheduler[Command], moveTimeout: FiniteDuration,
+                       fieldWidth: Int, fieldHeight: Int, shipRules: ShipRules, log: Logger): Effect[Event, State] = {
 
-    lazy val checkShipsMsg = checkShips(Rules.fieldWidth, Rules.fieldHeight, Rules.ships, ships)
+    lazy val checkShipsMsg = checkShips(fieldWidth, fieldHeight, shipRules, ships)
 
     if (!data.contains(playerId)) {
       log.info(s"Trying to setup ships for a non-existent player. gameId: $gameId, playerId: $playerId")

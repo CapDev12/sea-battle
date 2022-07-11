@@ -1,5 +1,6 @@
 package utils
 
+import model.Rules.{ShipRule, ShipRules}
 import model.Ships.Ship
 import model.Shots._
 
@@ -65,11 +66,11 @@ object BattleMath {
       .groupBy(_.decks)
       .map { case (decks, ships) => (decks, ships.size) }
 
-  def checkShipsDecks(rulesShips: Set[(Byte, Int)], ships: Seq[Ship]): Option[String] = {
+  def checkShipsDecks(rulesShips: ShipRules, ships: Seq[Ship]): Option[String] = {
     val shipDecksCount = calculateShipsDecks(ships)
 
     val items = rulesShips
-      .flatMap { case (decks, ruleShipCount) =>
+      .flatMap { case ShipRule(decks, ruleShipCount) =>
         val count = shipDecksCount.getOrElse(decks, 0)
         if (count < ruleShipCount)
           Some(s"Missing ${ruleShipCount - count} $decks-deck ships")
@@ -80,7 +81,7 @@ object BattleMath {
       }
 
     val extra = shipDecksCount
-      .filter { case (decks, _) => !rulesShips.toMap.keySet.contains(decks) }
+      .filter { case (decks, _) => !rulesShips.exists(_.decks == decks) }
       .flatMap { case (decks, count) => Some(s"Extra $count $decks-deck ships") }
 
     if ((items ++ extra).nonEmpty) Some((items ++ extra).mkString(". ")) else None
@@ -127,7 +128,7 @@ object BattleMath {
       None
   }
 
-  def checkShips(fieldWidth: Int, fieldHeight: Int, rulesShips: Set[(Byte, Int)], ships: Seq[Ship]): Option[String] = {
+  def checkShips(fieldWidth: Int, fieldHeight: Int, rulesShips: ShipRules, ships: Seq[Ship]): Option[String] = {
     val errors = Seq(
       checkShipsDecks(rulesShips, ships),
       checkShipsBounds(fieldWidth, fieldHeight, ships),
@@ -138,7 +139,7 @@ object BattleMath {
 
   lazy val random = new Random()
 
-  def randormPlaceShipsToField(fieldWidth: Int, fieldHeight: Int, ships: Set[(Byte, Int)]): Seq[Ship] = {
+  def randormPlaceShipsToField(fieldWidth: Int, fieldHeight: Int, ships: ShipRules): Seq[Ship] = {
 
     def isShipIntersect(ships: Seq[Ship], ship: Ship): Boolean =
       ships.exists(BattleMath.cells(_, withBorder = true, fieldWidth, fieldHeight).intersect(BattleMath.cells(ship)) != Set.empty)
@@ -163,7 +164,7 @@ object BattleMath {
 
     val placeShips = ships
       .toSeq
-      .flatMap { case (decks, count) => Seq.fill(count)(decks) }
+      .flatMap { case ShipRule(decks, count) => Seq.fill(count)(decks) }
       .sorted(Ordering[Byte].reverse)
 
     place(fieldWidth, fieldHeight, placeShips, Seq.empty, random.nextInt)
