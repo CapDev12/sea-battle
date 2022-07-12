@@ -1,25 +1,20 @@
 package actors
 
-import actors.Game.{Battle, CreateGameCmd, CreateGameEvent, EndGame, Init, Setup, SetupGameCmd, SetupGameEvent, ShotCmd, ShotEvent}
-import actors.Manager.{CreateGameResultMsg, GameResultMsg, Message, SetupGameResultMsg, ShotResultMsg}
-import akka.Done
-import akka.actor.testkit.typed.scaladsl.{ActorTestKit, LogCapturing, ScalaTestWithActorTestKit, TestProbe}
-import akka.pattern.StatusReply
+import actors.Game._
+import actors.Manager.{CreateGameResultMsg, GameResultMsg, SetupGameResultMsg, ShotResultMsg}
+import akka.actor.testkit.typed.scaladsl.{ScalaTestWithActorTestKit, TestProbe}
 import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
 import com.typesafe.config.ConfigFactory
 import model.Games.GameId
-import model.Players.PlayerData
+import model.Players.{PlayerData, PlayerId}
 import model.Rules
 import model.Rules.{ShipRule, ShipRules}
 import model.Ships.Ship
-import model.Shots.{Destroyed, Injured, Missed, Shot, ShotResult, Won}
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
-import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.{AnyWordSpec, AnyWordSpecLike}
-import utils.BattleMath
+import model.Shots._
+import org.scalatest.wordspec.AnyWordSpecLike
 import utils.Utils.uuid
 
-import scala.concurrent.duration.DurationInt
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 class GameSpec extends
   ScalaTestWithActorTestKit(EventSourcedBehaviorTestKit.config.withFallback(ConfigFactory.load()))
@@ -117,7 +112,7 @@ class GameSpec extends
 
     "ships setup timeout" in {
       val eventSourcedTestKit: EventSourcedBehaviorTestKit[Game.Command, Game.Event, Game.State] =
-        EventSourcedBehaviorTestKit(system, Game("entityId1", 100.millis, 5.seconds, Rules.fieldWidth, Rules.fieldHeight, shipRules))
+        EventSourcedBehaviorTestKit(system, Game("entityId1", 500.millis, 5.seconds, Rules.fieldWidth, Rules.fieldHeight, shipRules))
 
       eventSourcedTestKit.runCommand(CreateGameCmd(gameId, playerId1, playerId2, probe.ref, probe.ref))
       probe.expectMessage(CreateGameResultMsg(gameId, playerId1, playerId2, success = true, probe.ref))
@@ -126,37 +121,35 @@ class GameSpec extends
       eventSourcedTestKit.runCommand(SetupGameCmd(playerId1, ships, probe.ref))
       probe.expectMessage(SetupGameResultMsg(gameId, playerId1, success = true))
 
-      Thread.sleep(100)
+      Thread.sleep(600)
       //Waiting for setup from the second player, a timeout occurs and Game finishing
       probe.expectMessage(GameResultMsg(gameId, None))
       probe.expectNoMessage()
     }
 
-//    "skip shot not in your turn" in {
-//      val game = testKit.spawn(Game(data, probe.ref))
-//
-//      val ShotCmd11 = ShotCmd(playerId1, 1, 1)
-//      val ShotCmd21 = ShotCmd(playerId2, 3, 3)
-//      val ShotCmd12 = ShotCmd(playerId1, 1, 2)
-//      val ShotCmd22 = ShotCmd(playerId2, 2, 1)
-//
-//      game ! ShotCmd11
-//      probe.expectMessage(ShotResultEvent(ShotCmd11, Injured))
-//      game ! ShotCmd21
-//      game ! ShotCmd22
-//      probe.expectMessage(ShotResultEvent(ShotCmd21, Missed))
-//      probe.expectNoMessage()
-//      game ! ShotCmd12
-//      probe.expectMessage(ShotResultEvent(ShotCmd12, Destroyed))
-//    }
+    "reject shot not in your turn" in {
+      implicit val eventSourcedTestKit: EventSourcedBehaviorTestKit[Command, Event, State] =
+        createAndSetupGame(5.seconds)
 
+      shotCmd(playerId1, 1, 1, Missed)
+      shotCmd(playerId1, 1, 1, NotYourTurn)
+      probe.expectNoMessage()
+    }
+
+    "shot timeout" in {
+      implicit val eventSourcedTestKit: EventSourcedBehaviorTestKit[Command, Event, State] =
+        createAndSetupGame(500.millis)
+
+      shotCmd(playerId1, 1, 1, Missed)
+
+      Thread.sleep(600)
+
+      shotCmd(playerId2, 1, 1, NotYourTurn)
+      shotCmd(playerId1, 1, 1, Missed)
+      probe.expectNoMessage()
+    }
   }
 
-  def shotToResult(gameId: GameId, shot: ShotCmd, result: String): ShotResultMsg =
-    ShotResultMsg(gameId, shot.playerId, shot.x, shot.y, result)
-
-  def shotCmdToShot(shotCmd: ShotCmd): Shot =
-    Shot(shotCmd.x, shotCmd.y)
 
   def execCmd(cmd: Game.Command, event: Game.Event, state: Game.State, resultMsgs: Seq[Manager.Result])
              (implicit eventSourcedTestKit: EventSourcedBehaviorTestKit[Game.Command, Game.Event, Game.State]): Unit = {
@@ -175,17 +168,41 @@ class GameSpec extends
       moverId = if (battle.moverId == playerId1) playerId2 else playerId1,
       //add shot
       data = battle.data.updated(
-        battle.moverId, battle.data(battle.moverId).copy(shots = battle.data(battle.moverId).shots :+ shotCmdToShot(shotCmd))
+        battle.moverId, battle.data(battle.moverId).copy(shots = battle.data(battle.moverId).shots :+ Shot(shotCmd.x, shotCmd.y))
       ))
 
     execCmd(
       cmd = shotCmd,
       event = ShotEvent(shotCmd.playerId, shotCmd.x, shotCmd.y),
       state = newState,
-      resultMsgs = Seq(shotToResult(gameId, shotCmd, shotResult.toString))
+      resultMsgs = Seq(ShotResultMsg(gameId, shotCmd.playerId, shotCmd.x, shotCmd.y, shotResult.toString))
     )
 
     newState
+  }
+
+  def createAndSetupGame(moveTimeout: FiniteDuration): EventSourcedBehaviorTestKit[Game.Command, Game.Event, Game.State]= {
+    val eventSourcedTestKit: EventSourcedBehaviorTestKit[Game.Command, Game.Event, Game.State] =
+      EventSourcedBehaviorTestKit(system, Game("entityId1", 10.seconds, moveTimeout, Rules.fieldWidth, Rules.fieldHeight, shipRules))
+
+    eventSourcedTestKit.runCommand(CreateGameCmd(gameId, playerId1, playerId2, probe.ref, probe.ref))
+    probe.expectMessage(CreateGameResultMsg(gameId, playerId1, playerId2, success = true, probe.ref))
+    probe.expectNoMessage()
+
+    eventSourcedTestKit.runCommand(SetupGameCmd(playerId1, ships, probe.ref))
+    probe.expectMessage(SetupGameResultMsg(gameId, playerId1, success = true))
+    probe.expectNoMessage()
+
+    eventSourcedTestKit.runCommand(SetupGameCmd(playerId2, ships, probe.ref))
+    probe.expectMessage(SetupGameResultMsg(gameId, playerId2, success = true))
+
+    eventSourcedTestKit
+  }
+
+  def shotCmd(playerId: PlayerId, x: Int, y: Int, shotResult: ShotResult)
+             (implicit eventSourcedTestKit: EventSourcedBehaviorTestKit[Game.Command, Game.Event, Game.State]): Unit = {
+    eventSourcedTestKit.runCommand(ShotCmd(playerId, x, y, probe.ref, probe.ref))
+    probe.expectMessage(ShotResultMsg(gameId, playerId, x, y, shotResult.toString))
   }
 
 }
