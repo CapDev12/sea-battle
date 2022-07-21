@@ -19,8 +19,8 @@ object Guardian {
       if (useClustrListener)
         context.spawn(ClusterListener(), "ClusterListener")
 
-      val gameSharding = GameSharding(ClusterSharding(context.system), setupTimeout, moveTimeout, fieldWidth, fieldHeight, shipRules)
-      gameSharding.initSharding()
+      val gameSharding: GameSharding =
+        GameShardingImpl(ClusterSharding(context.system), setupTimeout, moveTimeout, fieldWidth, fieldHeight, shipRules)
 
       if (apiEnabled) {
         val managerActor = context.spawn(Manager(gameSharding), "Manager")

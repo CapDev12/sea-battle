@@ -16,7 +16,8 @@ object Manager {
   sealed trait Result extends CborSerializable
 
   case class CreateGameMsg(playerId1: PlayerId, playerId2: PlayerId, replyTo: ActorRef[Result]) extends Message
-  case class CreateGameResultMsg(gameId: GameId, playerId1: PlayerId, playerId2: PlayerId, success: Boolean, replyTo: ActorRef[Result]) extends Message with Result
+  case class CreateGameResultMsg(gameId: GameId, playerId1: PlayerId, playerId2: PlayerId, success: Boolean,
+                                 replyTo: ActorRef[Result]) extends Message with Result
 
   case class SetupGameMsg(gameId: GameId, playerId: PlayerId, ships: Seq[Ship], replyTo: ActorRef[Result]) extends Message
   case class SetupGameResultMsg(gameId: GameId, playerId: PlayerId, success: Boolean) extends Message with Result
@@ -26,20 +27,22 @@ object Manager {
   case class ShotMsg(gameId: GameId, playerId: PlayerId, x: Int, y: Int, replyTo: ActorRef[Result]) extends Message
   case class ShotResultMsg(gameId: GameId, playerId: PlayerId, x: Int, y: Int, result: String) extends Message with Result
 
-  case class WatchMsg(gameId: GameId, playerId: PlayerId, actor: akka.actor.ActorRef) extends Message
+  case class WatchMsg(gameId: GameId, playerId: PlayerId, actorRef: akka.actor.ActorRef) extends Message
 
-  def apply(sharding: GameSharding): Behavior[Message] = gameBehavior(0L, Set())(sharding)
+  def apply(sharding: GameSharding): Behavior[Message] =
+    gameBehavior(0L, Set())(sharding)
 
   private def gameBehavior(gameCount: Long, games: Set[GameId])(implicit sharding: GameSharding): Behavior[Message] =
     Behaviors.setup { context =>
       Behaviors.receiveMessagePartial(
         gamePF(context.log, gameCount, games, context.self.unsafeUpcast) orElse
         shotPF(context.log, games, context.self.unsafeUpcast) orElse
-        watchingPF
+        watchPF
       )
     }
 
-  private def gamePF(log: Logger, gameCount: Long, games: Set[GameId], managerRef: ActorRef[Result])(implicit sharding: GameSharding): PartialFunction[Message, Behavior[Message]] = {
+  private def gamePF(log: Logger, gameCount: Long, games: Set[GameId], managerRef: ActorRef[Result])
+                    (implicit sharding: GameSharding): PartialFunction[Message, Behavior[Message]] = {
     case CreateGameMsg(playerId1, playerId2, replyTo) =>
       val gameId = Utils.uuid
       val game = sharding.entityRefFor(gameId.toString)
@@ -49,7 +52,8 @@ object Manager {
       gameBehavior(gameCount + 1, games)
 
     case createGameResult @ CreateGameResultMsg(gameId, playerId1, playerId2, success, replyTo) =>
-      log.info(s"Game started gameId: $gameId playerId1: $playerId1, playerId2: $playerId2, success: $success  gamesCount: ${games.size + 1}")
+      log.info(s"Game started gameId: $gameId playerId1: $playerId1, playerId2: $playerId2, " +
+        s"success: $success  gamesCount: ${games.size + 1}")
       replyTo ! createGameResult
       gameBehavior(gameCount, games + gameId)
 
@@ -69,7 +73,8 @@ object Manager {
       gameBehavior(gameCount, games - gameId)
   }
 
-  private def shotPF(log: Logger, games: Set[GameId], managerRef: ActorRef[Result])(implicit sharding: GameSharding): PartialFunction[Message, Behavior[Message]] = {
+  private def shotPF(log: Logger, games: Set[GameId], managerRef: ActorRef[Result])
+                    (implicit sharding: GameSharding): PartialFunction[Message, Behavior[Message]] = {
     case ShotMsg(gameId, playerId, x, y, replyTo) =>
       if(games.contains(gameId)) {
         val game = sharding.entityRefFor(gameId.toString)
@@ -82,10 +87,10 @@ object Manager {
       Behaviors.same
   }
 
-  private def watchingPF(implicit sharding: GameSharding): PartialFunction[Message, Behavior[Message]] = {
-    case WatchMsg(gameId, _, actor) =>
+  private def watchPF(implicit sharding: GameSharding): PartialFunction[Message, Behavior[Message]] = {
+    case WatchMsg(gameId, _, actorRef) =>
       val game = sharding.entityRefFor(gameId.toString)
-      game ! Game.WatchCmd(actor)
+      game ! Game.WatchCmd(actorRef)
       Behaviors.same
   }
 
