@@ -26,7 +26,7 @@ class BattleServiceImpl(actor: ActorRef[Message], implicit val timeout: Timeout)
     }
   }
 
-  def movesActor(gameId: GameId, playerId: PlayerId): Source[ShotResult, NotUsed] = Source.actorRef[Message](
+  def movesSrc(gameId: GameId, playerId: PlayerId): Source[ShotResult, NotUsed] = Source.actorRef[Message](
     completionMatcher = closePF(gameId),
     failureMatcher = PartialFunction.empty,
     bufferSize = 100,
@@ -66,7 +66,7 @@ class BattleServiceImpl(actor: ActorRef[Message], implicit val timeout: Timeout)
     val gameId = UUID.fromString(in.gameId)
     val playerId = UUID.fromString(in.playerId)
 
-    movesActor(gameId, playerId)
+    movesSrc(gameId, playerId)
   }
 
   override def setup(in: Setup): Future[SetupResult] = {

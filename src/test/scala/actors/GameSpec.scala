@@ -5,7 +5,6 @@ import actors.Manager.{CreateGameResultMsg, GameResultMsg, SetupGameResultMsg, S
 import akka.actor.testkit.typed.scaladsl.{ScalaTestWithActorTestKit, TestProbe}
 import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
 import com.typesafe.config.ConfigFactory
-import model.Games.GameId
 import model.Players.{PlayerData, PlayerId}
 import model.Rules
 import model.Rules.{ShipRule, ShipRules}
@@ -30,6 +29,7 @@ class GameSpec extends
   private val playerId2 = uuid
 
   private val probe = TestProbe[Manager.Result]()
+  private val watchProbe = akka.testkit.TestProbe()(system.classicSystem)
 
   private val ships = Seq(
     Ship(x = 2, y = 2, dir = true, decks = 2),
@@ -38,9 +38,8 @@ class GameSpec extends
 
   "Game" must {
 
-    //Check life cycle with events and inner state
     "follow the life cycle" in {
-
+      //Check life cycle with events and inner state
       implicit val eventSourcedTestKit: EventSourcedBehaviorTestKit[Game.Command, Game.Event, Game.State] =
         EventSourcedBehaviorTestKit(system, Game("entityId1", 10.seconds, 5.seconds, Rules.fieldWidth, Rules.fieldHeight, shipRules))
 
@@ -59,7 +58,7 @@ class GameSpec extends
           playerId2 -> PlayerData(List(), List())
         ),
         managerRef = probe.ref,
-        movesAct = List()
+        watchRefs = List()
       )
 
       execCmd(
@@ -136,7 +135,7 @@ class GameSpec extends
       probe.expectNoMessage()
     }
 
-    "shot timeout" in {
+    "skip move by timeout" in {
       implicit val eventSourcedTestKit: EventSourcedBehaviorTestKit[Command, Event, State] =
         createAndSetupGame(500.millis)
 
@@ -147,6 +146,21 @@ class GameSpec extends
       shotCmd(playerId2, 1, 1, NotYourTurn)
       shotCmd(playerId1, 1, 1, Missed)
       probe.expectNoMessage()
+    }
+
+    "send game message by watching" in {
+      implicit val eventSourcedTestKit: EventSourcedBehaviorTestKit[Command, Event, State] =
+        createAndSetupGame(500.millis)
+
+      eventSourcedTestKit.runCommand(WatchCmd(watchProbe.ref))
+
+      shotCmd(playerId1, 1, 1, Missed)
+      watchProbe.expectMsg(ShotResultMsg(gameId, playerId1, 1, 1, Missed.toString))
+      shotCmd(playerId2, 1, 1, Missed)
+      watchProbe.expectMsg(ShotResultMsg(gameId, playerId2, 1, 1, Missed.toString))
+
+      probe.expectNoMessage()
+      watchProbe.expectNoMessage()
     }
   }
 
