@@ -38,7 +38,7 @@ class GameSpec extends
 
   "Game" must {
 
-    "follow the life cycle" in {
+    "handle life cycle" in {
       //Check life cycle with events and inner state
       implicit val eventSourcedTestKit: EventSourcedBehaviorTestKit[Game.Command, Game.Event, Game.State] =
         EventSourcedBehaviorTestKit(system, Game("entityId1", 10.seconds, 5.seconds, Rules.fieldWidth, Rules.fieldHeight, shipRules))
@@ -109,26 +109,44 @@ class GameSpec extends
 
     }
 
-    "ships setup timeout" in {
-      val eventSourcedTestKit: EventSourcedBehaviorTestKit[Game.Command, Game.Event, Game.State] =
-        EventSourcedBehaviorTestKit(system, Game("entityId1", 500.millis, 5.seconds, Rules.fieldWidth, Rules.fieldHeight, shipRules))
-
-      eventSourcedTestKit.runCommand(CreateGameCmd(gameId, playerId1, playerId2, probe.ref, probe.ref))
-      probe.expectMessage(CreateGameResultMsg(gameId, playerId1, playerId2, success = true, probe.ref))
-      probe.expectNoMessage()
+    "handle ships setup timeout" in {
+      val eventSourcedTestKit = createGame(setupTimeout = 500.millis)
 
       eventSourcedTestKit.runCommand(SetupGameCmd(playerId1, ships, probe.ref))
       probe.expectMessage(SetupGameResultMsg(gameId, playerId1, success = true))
 
       Thread.sleep(600)
+
       //Waiting for setup from the second player, a timeout occurs and Game finishing
       probe.expectMessage(GameResultMsg(gameId, None))
       probe.expectNoMessage()
     }
 
+    "handle wrong ships setup" in {
+      val wrongShips = Seq(
+        Ship(x = 2, y = 2, dir = true, decks = 2)
+      )
+
+      val eventSourcedTestKit = createGame()
+
+      eventSourcedTestKit.runCommand(SetupGameCmd(playerId1, wrongShips, probe.ref))
+      probe.expectMessage(SetupGameResultMsg(gameId, playerId1, success = false))
+      probe.expectNoMessage()
+    }
+
+    "handle setup ships for wrong player" in {
+      val wrongPlayerId = uuid
+
+      val eventSourcedTestKit = createGame()
+
+      eventSourcedTestKit.runCommand(SetupGameCmd(wrongPlayerId, ships, probe.ref))
+      probe.expectMessage(SetupGameResultMsg(gameId, wrongPlayerId, success = false))
+      probe.expectNoMessage()
+    }
+
     "reject shot not in your turn" in {
       implicit val eventSourcedTestKit: EventSourcedBehaviorTestKit[Command, Event, State] =
-        createAndSetupGame(5.seconds)
+        createAndSetupGame(moveTimeout = 5.seconds)
 
       shotCmd(playerId1, 1, 1, Missed)
       shotCmd(playerId1, 1, 1, NotYourTurn)
@@ -137,7 +155,7 @@ class GameSpec extends
 
     "skip move by timeout" in {
       implicit val eventSourcedTestKit: EventSourcedBehaviorTestKit[Command, Event, State] =
-        createAndSetupGame(500.millis)
+        createAndSetupGame(moveTimeout = 500.millis)
 
       shotCmd(playerId1, 1, 1, Missed)
 
@@ -150,7 +168,7 @@ class GameSpec extends
 
     "send game message by watching" in {
       implicit val eventSourcedTestKit: EventSourcedBehaviorTestKit[Command, Event, State] =
-        createAndSetupGame(500.millis)
+        createAndSetupGame(moveTimeout = 500.millis)
 
       eventSourcedTestKit.runCommand(WatchCmd(watchProbe.ref))
 
@@ -195,13 +213,19 @@ class GameSpec extends
     newState
   }
 
-  def createAndSetupGame(moveTimeout: FiniteDuration): EventSourcedBehaviorTestKit[Game.Command, Game.Event, Game.State]= {
+  def createGame(setupTimeout: FiniteDuration = 10.seconds, moveTimeout: FiniteDuration = 5.seconds): EventSourcedBehaviorTestKit[Game.Command, Game.Event, Game.State]= {
     val eventSourcedTestKit: EventSourcedBehaviorTestKit[Game.Command, Game.Event, Game.State] =
-      EventSourcedBehaviorTestKit(system, Game("entityId1", 10.seconds, moveTimeout, Rules.fieldWidth, Rules.fieldHeight, shipRules))
+      EventSourcedBehaviorTestKit(system, Game("entityId1", setupTimeout, moveTimeout, Rules.fieldWidth, Rules.fieldHeight, shipRules))
 
     eventSourcedTestKit.runCommand(CreateGameCmd(gameId, playerId1, playerId2, probe.ref, probe.ref))
     probe.expectMessage(CreateGameResultMsg(gameId, playerId1, playerId2, success = true, probe.ref))
     probe.expectNoMessage()
+
+    eventSourcedTestKit
+  }
+
+  def createAndSetupGame(moveTimeout: FiniteDuration): EventSourcedBehaviorTestKit[Game.Command, Game.Event, Game.State]= {
+    val eventSourcedTestKit = createGame(moveTimeout = moveTimeout)
 
     eventSourcedTestKit.runCommand(SetupGameCmd(playerId1, ships, probe.ref))
     probe.expectMessage(SetupGameResultMsg(gameId, playerId1, success = true))
