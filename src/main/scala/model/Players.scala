@@ -8,7 +8,6 @@ import java.util.UUID
 object Players {
   type PlayerId = UUID
 
-  case class Player(id: PlayerId, name: String)
   case class PlayerData(ships: Seq[Ship], shots: Seq[Shot], setupShips: Boolean = false)
 
   type PlayersData = Map[PlayerId, PlayerData]

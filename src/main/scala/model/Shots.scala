@@ -15,6 +15,4 @@ object Shots {
 
   case class Shot(x: Int, y: Int)
 
-  def checkShotBounds(x: Int, y: Int): Boolean =
-    x >= 1 && x <= Rules.fieldWidth && y >= 1 && y <= Rules.fieldHeight
 }

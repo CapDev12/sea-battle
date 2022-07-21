@@ -9,6 +9,9 @@ import scala.annotation.tailrec
 
 object BattleMath {
 
+  def checkShotBounds(x: Int, y: Int, fieldWidth: Int, fieldHeight: Int): Boolean =
+    x >= 1 && x <= fieldWidth && y >= 1 && y <= fieldHeight
+
   def cells(ship: Ship, withBorder: Boolean = false, fieldWidth: Int = 10, fieldHeight: Int = 10): Set[Shot] = {
     def cellBorder(x: Int, y: Int): Seq[Shot] =
       Seq(
