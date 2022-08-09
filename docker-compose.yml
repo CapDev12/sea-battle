@@ -5,53 +5,29 @@ services:
       - MYSQL_ROOT_PASSWORD=password
     ports:
       - "3306:3306"
-#    volumes:
-#      - /home/capdev/mysql/data:/var/lib/mysql
     image: mysql:latest
 
-#  node1:
-#    build: .
-#    environment:
-#      - ARTERY_HOST=node1
-#      - ARTERY_PORT=2551
-#      - SEED_HOST_1=node1
-#      - SEED_HOST_2=node2
-#      - DB_HOST=mysql
-#    ports:
-#      - "8080:8080"
-#
-#  node2:
-#    build: .
-#    environment:
-#      - ARTERY_HOST=node2
-#      - ARTERY_PORT=2552
-#      - SEED_HOST_1=node1
-#      - SEED_HOST_2=node2
-#      - DB_HOST=mysql
-#
-#  node3:
-#    build: .
-#    environment:
-#      - ARTERY_HOST=node3
-#      - ARTERY_PORT=0
-#      - SEED_HOST_1=node1
-#      - SEED_HOST_2=node2
-#      - DB_HOST=mysql
-#
-#  node4:
-#    build: .
-#    environment:
-#      - ARTERY_HOST=node4
-#      - ARTERY_PORT=0
-#      - SEED_HOST_1=node1
-#      - SEED_HOST_2=node2
-#      - DB_HOST=mysql
-#
-#  node5:
-#    build: .
-#    environment:
-#      - ARTERY_HOST=node5
-#      - ARTERY_PORT=0
-#      - SEED_HOST_1=node1
-#      - SEED_HOST_2=node2
-#      - DB_HOST=mysql
+  node1:
+    build: .
+    environment:
+      - API_ENABLED=on
+      - ARTERY_HOST=node1
+      - ARTERY_PORT=2551
+      - SEED1_HOST=node1
+      - SEED1_PORT=2551
+      - SEED2_HOST=node2
+      - SEED2_PORT=2552
+      - DB_HOST=mysql
+    ports:
+      - "8080:8080"
+
+  node2:
+    build: .
+    environment:
+      - ARTERY_HOST=node2
+      - ARTERY_PORT=2552
+      - SEED1_HOST=node1
+      - SEED1_PORT=2551
+      - SEED2_HOST=node2
+      - SEED2_PORT=2552
+      - DB_HOST=mysql

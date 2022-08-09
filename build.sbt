@@ -46,4 +46,6 @@ assembly / assemblyMergeStrategy := {
   case x => MergeStrategy.first
 }
 
+assembly / test := {}
+
 enablePlugins(AkkaGrpcPlugin)
