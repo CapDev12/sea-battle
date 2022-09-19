@@ -31,8 +31,8 @@ object Main extends App {
     .createIfNotExists()
     .onComplete {
       case Success(_) =>
-        system.log.info("createIfNotExists: Database initialized")
+        system.log.info("Database initialized successfully")
       case Failure(ex) =>
-        system.log.info("An error has occurred: " + ex.getMessage)
+        system.log.info("An error occurred while initializing the database: " + ex.getMessage)
     }
 }
