@@ -68,4 +68,5 @@ message SetupResult {
     string gameId = 1;
     string playerId = 2;
     bool success = 3;
+    string message = 4;
 }

@@ -80,8 +80,8 @@ class BattleServiceImpl(actor: ActorRef[Message], implicit val timeout: Timeout)
     actor
       .ask[Result](act => SetupGameMsg(gameId, playerId, ships, act))
       .collect {
-        case SetupGameResultMsg(gameId, playerId, success) =>
-          SetupResult(gameId.toString, playerId.toString, success)
+        case SetupGameResultMsg(gameId, playerId, success, message) =>
+          SetupResult(gameId.toString, playerId.toString, success, message.getOrElse(""))
       }
   }
 

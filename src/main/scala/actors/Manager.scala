@@ -20,7 +20,7 @@ object Manager {
                                  replyTo: ActorRef[Result]) extends Message with Result
 
   case class SetupGameMsg(gameId: GameId, playerId: PlayerId, ships: Seq[Ship], replyTo: ActorRef[Result]) extends Message
-  case class SetupGameResultMsg(gameId: GameId, playerId: PlayerId, success: Boolean) extends Message with Result
+  case class SetupGameResultMsg(gameId: GameId, playerId: PlayerId, success: Boolean, message: Option[String] = None) extends Message with Result
 
   case class GameResultMsg(gameId: GameId, winnerId: Option[PlayerId]) extends Message with Result
 

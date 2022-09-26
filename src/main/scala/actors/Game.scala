@@ -138,18 +138,20 @@ object Game {
                        replyTo: ActorRef[Manager.Result], timers: TimerScheduler[Command], moveTimeout: FiniteDuration,
                        fieldWidth: Int, fieldHeight: Int, shipRules: ShipRules, log: Logger): Effect[Event, State] = {
 
-    lazy val checkShipsMsg = checkShips(fieldWidth, fieldHeight, shipRules, ships)
+    val checkShipsMsg = checkShips(fieldWidth, fieldHeight, shipRules, ships)
 
     if (!data.contains(playerId)) {
-      log.info(s"Trying to setup ships for a non-existent player. gameId: $gameId, playerId: $playerId")
+      val msg = s"Trying to setup ships for a non-existent player."
+      log.info(s"$msg gameId: $gameId, playerId: $playerId")
       Effect
         .none
-        .thenRun(_ => replyTo ! SetupGameResultMsg(gameId, playerId, success = false))
+        .thenRun(_ => replyTo ! SetupGameResultMsg(gameId, playerId, success = false, Some(msg)))
     } else if (checkShipsMsg.nonEmpty) {
-      log.info(s"Setup non-valid ships. gameId: $gameId, playerId: $playerId\n${checkShipsMsg.get}")
+      val msg = checkShipsMsg.map(errors => s"Setup non-valid ships. $errors").getOrElse("")
+      log.info(s"$msg gameId: $gameId, playerId: $playerId")
       Effect
         .none
-        .thenRun(_ => replyTo ! SetupGameResultMsg(gameId, playerId, success = false))
+        .thenRun(_ => replyTo ! SetupGameResultMsg(gameId, playerId, success = false, Some(msg)))
     } else {
       Effect
         .persist(SetupGameEvent(gameId, playerId, ships))

@@ -130,7 +130,7 @@ class GameSpec extends
       val eventSourcedTestKit = createGame()
 
       eventSourcedTestKit.runCommand(SetupGameCmd(playerId1, wrongShips, probe.ref))
-      probe.expectMessage(SetupGameResultMsg(gameId, playerId1, success = false))
+      probe.expectMessage(SetupGameResultMsg(gameId, playerId1, success = false, Some("Setup non-valid ships. Missing 1 1-deck ships")))
       probe.expectNoMessage()
     }
 
@@ -140,7 +140,7 @@ class GameSpec extends
       val eventSourcedTestKit = createGame()
 
       eventSourcedTestKit.runCommand(SetupGameCmd(wrongPlayerId, ships, probe.ref))
-      probe.expectMessage(SetupGameResultMsg(gameId, wrongPlayerId, success = false))
+      probe.expectMessage(SetupGameResultMsg(gameId, wrongPlayerId, success = false, Some("Trying to setup ships for a non-existent player.")))
       probe.expectNoMessage()
     }
 
