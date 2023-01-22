@@ -19,7 +19,7 @@ services:
       - SEED2_PORT=2552
       - DB_HOST=mysql
     ports:
-      - "8080:8080"
+      - "8081:8080"
 
   node2:
     build: .
