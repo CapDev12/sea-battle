@@ -11,7 +11,9 @@ import scala.util.{Failure, Success}
 object Main extends App {
 
   val config = ConfigFactory.load()
-
+  
+  system.log.info(s"Service started. Config: $config")
+  
   import utils.Utils.{durationToFiniteDuration, durationToTimeout}
   implicit val system: ActorSystem[NotUsed] = ActorSystem(
     Guardian(
