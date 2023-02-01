@@ -11,7 +11,7 @@ import scala.util.{Failure, Success}
 object Main extends App {
 
   val config = ConfigFactory.load()
-
+  
   import utils.Utils.{durationToFiniteDuration, durationToTimeout}
   implicit val system: ActorSystem[NotUsed] = ActorSystem(
     Guardian(
