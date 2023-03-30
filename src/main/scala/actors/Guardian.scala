@@ -1,9 +1,10 @@
 package actors
 
 import akka.NotUsed
-import akka.actor.typed.Behavior
+import akka.actor.typed.{ActorSystem, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
 import akka.cluster.sharding.typed.scaladsl.ClusterSharding
+import akka.management.scaladsl.AkkaManagement
 import akka.util.Timeout
 import grpc.GrpcServer
 import model.Rules.ShipRules
@@ -16,6 +17,7 @@ object Guardian {
             setupTimeout: FiniteDuration, moveTimeout: FiniteDuration, fieldWidth: Int, fieldHeight: Int,
             shipRules: ShipRules): Behavior[NotUsed] =
     Behaviors.setup { context =>
+      implicit val system: ActorSystem[_] = context.system
       if (useClustrListener)
         context.spawn(ClusterListener(), "ClusterListener")
 
@@ -24,8 +26,10 @@ object Guardian {
 
       if (apiEnabled) {
         val managerActor = context.spawn(Manager(gameSharding), "Manager")
-        GrpcServer(interface, port, askTimeout, managerActor)(context.system)
+        GrpcServer(interface, port, askTimeout, managerActor)
       }
+
+      AkkaManagement(system).start()
 
       Behaviors.same
     }

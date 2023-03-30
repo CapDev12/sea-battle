@@ -4,7 +4,7 @@ services:
     environment:
       - MYSQL_ROOT_PASSWORD=password
     ports:
-      - "3306:3306"
+      - 3306:3306
     image: mysql:latest
 
   node1:
@@ -18,11 +18,38 @@ services:
       - SEED2_HOST=node2
       - SEED2_PORT=2552
       - DB_HOST=mysql
+      - HEALTH_PORT=8558
     ports:
-      - "8081:8080"
+      - 8080:8080
+#      - 8558:8558
+    healthcheck:
+      test: curl -sS http://127.0.0.1:8558/ready || echo 1
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    deploy:
+      placement:
+        constraints:
+          - node.labels.TAG==amd64
+  #      replicas: 1
+  #      update_config:
+  #        parallelism: 1
+  #        order: start-first
+  #        failure_action: rollback
+  #        delay: 10s
+  #      rollback_config:
+  #        parallelism: 0
+  #        order: stop-first
+  #      restart_policy:
+  #        condition: any
+  #        delay: 5s
+  #        max_attempts: 3
+  #        window: 120s
 
   node2:
     build: .
+#    ports:
+#      - 8559:8558
     environment:
       - ARTERY_HOST=node2
       - ARTERY_PORT=2552
@@ -31,3 +58,13 @@ services:
       - SEED2_HOST=node2
       - SEED2_PORT=2552
       - DB_HOST=mysql
+      - HEALTH_PORT=8558
+    healthcheck:
+      test: curl -sS http://127.0.0.1:8558/ready || echo 1
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    deploy:
+      placement:
+        constraints:
+          - node.labels.TAG==amd64

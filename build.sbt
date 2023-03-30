@@ -2,12 +2,13 @@ ThisBuild / version := "0.1.0-SNAPSHOT"
 
 ThisBuild / scalaVersion := "2.13.8"
 
-val AkkaVersion = "2.6.19"
-val AkkaHttpVersion = "10.2.9"
+val AkkaVersion = "2.7.0"
+val AkkaHttpVersion = "10.4.0"
 val LogbackVersion = "1.2.9"
 val SlickVersion = "3.3.3"
 val MysqlDriverVersion = "8.0.13"
 val PersistenceJdbcVersion = "5.0.4"
+val AkkaManagementVersion = "1.2.0"
 
 libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor-typed" % AkkaVersion,
@@ -33,7 +34,11 @@ libraryDependencies ++= Seq(
 
   "com.typesafe.slick" %% "slick" % SlickVersion,
   "com.typesafe.slick" %% "slick-hikaricp" % SlickVersion,
-  "mysql" % "mysql-connector-java" % MysqlDriverVersion
+  "mysql" % "mysql-connector-java" % MysqlDriverVersion,
+
+  "com.lightbend.akka.management" %% "akka-management" % AkkaManagementVersion,
+  "com.lightbend.akka.management" %% "akka-management-cluster-http" % AkkaManagementVersion
+
 )
 
 assembly / assemblyJarName := "sea-battle.jar"
