@@ -1,14 +1,18 @@
 version: "3.9"
 services:
   mysql:
+    image: mysql:latest
     environment:
       - MYSQL_ROOT_PASSWORD=password
     ports:
       - 3306:3306
-    image: mysql:latest
+    deploy:
+      placement:
+        constraints:
+          - node.labels.arch==amd64
 
   node1:
-    build: beelink1:5000/sea-battle:latest
+    image: beelink1:5000/sea-battle:latest
     environment:
       - API_ENABLED=on
       - ARTERY_HOST=node1
@@ -30,7 +34,7 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.TAG==amd64
+          - node.labels.arch==amd64
   #      replicas: 1
   #      update_config:
   #        parallelism: 1
@@ -47,7 +51,7 @@ services:
   #        window: 120s
 
   node2:
-    build: beelink1:5000/sea-battle:latest
+    image: beelink1:5000/sea-battle:latest
 #    ports:
 #      - 8559:8558
     environment:
@@ -67,4 +71,4 @@ services:
     deploy:
       placement:
         constraints:
-          - node.labels.TAG==amd64
+          - node.labels.arch==amd64
