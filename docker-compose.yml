@@ -8,7 +8,7 @@ services:
     image: mysql:latest
 
   node1:
-    build: .
+    build: beelink1:5000/sea-battle:latest
     environment:
       - API_ENABLED=on
       - ARTERY_HOST=node1
@@ -47,7 +47,7 @@ services:
   #        window: 120s
 
   node2:
-    build: .
+    build: beelink1:5000/sea-battle:latest
 #    ports:
 #      - 8559:8558
     environment:
