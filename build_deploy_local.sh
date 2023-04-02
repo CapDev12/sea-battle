@@ -1,3 +1,6 @@
 sbt assembly
 
-docker compose up --build
+docker build -t beelink1:5000/sea-battle:latest .
+docker push beelink1:5000/sea-battle:latest
+
+docker compose up
