@@ -53,7 +53,7 @@ object Manager {
 
     case createGameResult @ CreateGameResultMsg(gameId, playerId1, playerId2, success, replyTo) =>
       log.info(s"Game started gameId: $gameId playerId1: $playerId1, playerId2: $playerId2, " +
-        s"success: $success  gamesCount: ${games.size + 1}")
+        s"success: $success  gameCount: ${games.size + 1}")
       replyTo ! createGameResult
       gameBehavior(gameCount, games + gameId)
 
