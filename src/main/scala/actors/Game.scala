@@ -29,7 +29,7 @@ object Game {
   case class CreateGameCmd(gameId: GameId, playerId1: PlayerId, playerId2: PlayerId, replyTo: ActorRef[Manager.Result], managerRef: ActorRef[Result]) extends Command
   case class SetupGameCmd(playerId: PlayerId, ships: Seq[Ship], replyTo: ActorRef[Manager.Result]) extends Command
   case object SetupTimeoutCmd extends Command
-  case class ShotCmd(playerId: PlayerId, x: Int, y: Int, /*replyTo: ActorRef[Manager.Result],*/ managerRef: ActorRef[Manager.Result]) extends Command
+  case class ShotCmd(playerId: PlayerId, x: Int, y: Int, replyTo: ActorRef[Manager.Result], managerRef: ActorRef[Manager.Result]) extends Command
   case class MoveTimeoutCmd(playerId: PlayerId) extends Command
   case class WatchCmd(actor: akka.actor.ActorRef) extends Command
 
@@ -201,7 +201,7 @@ object Game {
           val shotResultEvent = hit(targetShips, moverShots.toSet, Shot(cmd.x, cmd.y))
           val shotResultMsg = ShotResultMsg(gameId, cmd.playerId, cmd.x, cmd.y, shotResultEvent.toString)
 
-          //cmd.replyTo ! shotResultMsg
+          cmd.replyTo ! shotResultMsg
           watchRefs.foreach(_ ! shotResultMsg)
           log.info(s"Shot gameId: $gameId playerId: ${cmd.playerId} x: ${cmd.x} y: ${cmd.y} result: $shotResultEvent")
 
@@ -217,7 +217,7 @@ object Game {
         .none
         .thenRun { state =>
           val shotResultMsg = ShotResultMsg(gameId, cmd.playerId, cmd.x, cmd.y, Shots.NotYourTurn.toString)
-          //cmd.replyTo ! shotResultMsg
+          cmd.replyTo ! shotResultMsg
           watchRefs.foreach(_ ! shotResultMsg)
           log.info(s"Shot gameId: $gameId playerId: ${cmd.playerId} x: ${cmd.x} y: ${cmd.y} result: NotYourTurn")
         }

@@ -24,7 +24,7 @@ object Manager {
 
   case class GameResultMsg(gameId: GameId, winnerId: Option[PlayerId]) extends Message with Result
 
-  case class ShotMsg(gameId: GameId, playerId: PlayerId, x: Int, y: Int/*, replyTo: ActorRef[Result]*/) extends Message
+  case class ShotMsg(gameId: GameId, playerId: PlayerId, x: Int, y: Int, replyTo: ActorRef[Result]) extends Message
   case class ShotResultMsg(gameId: GameId, playerId: PlayerId, x: Int, y: Int, result: String) extends Message with Result
 
   case class WatchMsg(gameId: GameId, playerId: PlayerId, actorRef: akka.actor.ActorRef) extends Message
@@ -75,13 +75,13 @@ object Manager {
 
   private def shotPF(log: Logger, games: Set[GameId], managerRef: ActorRef[Result])
                     (implicit sharding: GameSharding): PartialFunction[Message, Behavior[Message]] = {
-    case ShotMsg(gameId, playerId, x, y/*, replyTo*/) =>
+    case ShotMsg(gameId, playerId, x, y, replyTo) =>
       if(games.contains(gameId)) {
         val game = sharding.entityRefFor(gameId.toString)
-        game ! Game.ShotCmd(playerId, x, y, /*replyTo,*/ managerRef)
+        game ! Game.ShotCmd(playerId, x, y, replyTo, managerRef)
       } else {
         log.info(s"Shot gameId: $gameId not found")
-        //replyTo ! ShotResultMsg(gameId, playerId, x, y, Shots.GameNotFound.toString)
+        replyTo ! ShotResultMsg(gameId, playerId, x, y, Shots.GameNotFound.toString)
       }
 
       Behaviors.same
