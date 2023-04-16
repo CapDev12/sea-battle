@@ -192,7 +192,7 @@ object Game {
       val event = ShotEvent(cmd.playerId, cmd.x, cmd.y)
 
       Effect
-        .persist(event)
+        .none//.persist(event)
         .thenRun { state =>
           val targetPlayerId = nextPlayerId(cmd.playerId, data.keys.toSeq)
 
@@ -202,8 +202,8 @@ object Game {
           val shotResultMsg = ShotResultMsg(gameId, cmd.playerId, cmd.x, cmd.y, shotResultEvent.toString)
 
           //cmd.replyTo ! shotResultMsg
-          watchRefs.foreach(_ ! shotResultMsg)
-          log.info(s"Shot gameId: $gameId playerId: ${cmd.playerId} x: ${cmd.x} y: ${cmd.y} result: $shotResultEvent")
+//          watchRefs.foreach(_ ! shotResultMsg)
+//          log.info(s"Shot gameId: $gameId playerId: ${cmd.playerId} x: ${cmd.x} y: ${cmd.y} result: $shotResultEvent")
 
           if (shotResultEvent == Shots.Won) {
             val msg = GameResultMsg(gameId, Some(moverId))
