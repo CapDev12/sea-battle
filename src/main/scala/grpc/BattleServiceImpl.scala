@@ -54,12 +54,14 @@ class BattleServiceImpl(actor: ActorRef[Message], implicit val timeout: Timeout)
     val gameId = UUID.fromString(in.gameId)
     val playerId = UUID.fromString(in.playerId)
 
-    actor
-      .ask[Result](act => ShotMsg(gameId, playerId, in.x, in.y, act))
-      .collect {
-        case ShotResultMsg(_, playerId, x, y, result) =>
-          ShotResult(playerId.toString, x, y, result)
-      }
+//    actor
+//      .ask[Result](act => ShotMsg(gameId, playerId, in.x, in.y, act))
+//      .collect {
+//        case ShotResultMsg(_, playerId, x, y, result) =>
+//          ShotResult(playerId.toString, x, y, result)
+//      }
+    actor ! ShotMsg(gameId, playerId, in.x, in.y)
+    Future.successful(ShotResult(playerId.toString, in.x, in.y, ""))
   }
 
   override def moves(in: Moves): Source[ShotResult, NotUsed] = {
